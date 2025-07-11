@@ -1,11 +1,30 @@
-# main.py
 import discord
 from discord.ext import commands
 import random
 import asyncio # Aynı anda birden fazla bot çalıştırmak için
+import os # Ortam değişkenlerini okumak için
+from flask import Flask # Replit'te botu 7/24 aktif tutmak için gerekli
+from threading import Thread # Replit'te botu 7/24 aktif tutmak için gerekli
 
-from bad_words import BAD_WORDS # bad_words.py dosyasından BAD_WORDS listesini içe aktarıyoruz
-from tokens import BOT_TOKENS # tokens.py dosyasından BOT_TOKENS listesini içe aktarıyoruz
+# bad_words.py dosyasından BAD_WORDS listesini içe aktarıyoruz
+from bad_words import BAD_WORDS
+
+# tokens.py dosyasından BOT_TOKENS listesini içe aktarıyoruz
+from tokens import BOT_TOKENS
+
+# --- Flask Web Sunucusu Kodu (Botu Replit'te 7/24 Aktif Tutmak İçin) ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot Alive!" # Botun çalıştığını gösteren basit bir mesaj
+
+def run():
+  app.run(host='0.0.0.0',port=8080) # Replit'in varsayılan portu 8080'dir
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 # --- Bot Ayarları ---
 # Botlarımızın kullanacağı intent'ler
@@ -56,7 +75,7 @@ def create_bot_instance(token):
         # Mesajı küçük harflere çevirip kontrol ediyoruz
         msg_content = message.content.lower()
 
-        for word in BAD_WORDS:
+        for word in BAD_WORDS: # BAD_WORDS listesi bad_words.py dosyasından geliyor
             if word in msg_content:
                 try:
                     await message.delete() # Mesajı sil
@@ -95,6 +114,11 @@ def create_bot_instance(token):
 # Ana fonksiyonumuz: Tüm botları paralel olarak başlatır
 async def main():
     tasks = []
+    # Eğer BOT_TOKENS listesi boşsa ve ortam değişkenlerinden token okumuyorsak, bot çalışmaz.
+    if not BOT_TOKENS: # BOT_TOKENS listesi tokens.py dosyasından geliyor
+        print("Hata: Hiç bot token'ı bulunamadı. Lütfen tokens.py dosyasını doldurun.")
+        return # Fonksiyondan çık
+
     for token in BOT_TOKENS:
         # Her token için bir bot örneği oluştur
         current_bot = create_bot_instance(token)
@@ -107,6 +131,9 @@ async def main():
 
 # Programı başlat
 if __name__ == '__main__':
+    # Flask sunucusunu başlatarak botu Replit'te 7/24 aktif tutma mekanizmasını çalıştır
+    keep_alive() # Bu satır çok önemli!
+
     # Eğer Windows kullanıyorsan ve asyncio ile ilgili bir hata alırsan, aşağıdaki satırı aktif et:
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
